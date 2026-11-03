@@ -35,8 +35,3 @@ Each dialect variant is compared to the original answer. A variant is flagged fo
 
 It tries up to 10 random variants and keeps the first one that passes. If none pass, it keeps the closest and flags it. These checks can't catch awkward or ungrammatical wording, so a human still needs to review the output.
 
-## Test
-
-    python -m unittest discover -s tests -t .
-
-`data/sample_responses.csv` is placeholder content only.
