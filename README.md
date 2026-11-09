@@ -2,6 +2,41 @@
 
 Turns SAE interview answers into dialect versions (via Multi-VALUE), flags risky ones, and leaves room for manual review.
 
+## Planned study architecture (tentative)
+
+> **Tentative, until the team decides otherwise.** Only the dialect generator (step 2 below) exists today. Everything else is planned. The full plan, open decisions and work list are in [PLAN.md](PLAN.md).
+
+The study asks whether an AI interview pipeline (speech-to-text plus an LLM grader) scores dialect answers lower than equally correct Standard American English answers, and which step causes any gap.
+
+```mermaid
+flowchart TD
+  A["SAE interview answers<br/>+ correctness labels"] --> B["Dialect generation<br/>Multi-VALUE + checks + human review"]
+  B --> T["Condition A: dialect text"]
+  B --> S["Speech<br/>human readers + synthetic voices"]
+  S --> H["Condition B: human-verified transcript"]
+  S --> R["Condition C: speech-to-text models"]
+  T --> G["LLM graders<br/>Aural report prompt, fixed rubric"]
+  H --> G
+  R --> G
+  R --> F["WER + dialect-feature survival"]
+  X["Natural-speech corpora<br/>NSC, Svarah, CORAAL"] --> RX["Same speech-to-text models"]
+  RX --> F
+  G --> M["Analysis: score gaps,<br/>missed correct answers, mixed-effects models"]
+  F --> M
+```
+
+1. **Answer bank:** SAE answers to technical interview questions, each with a correctness label.
+2. **Dialect generation** (`generate_dialects.py`, this repo): Indian English, Singlish, and possibly AAE, then reviewed by speakers of each variety.
+3. **Speech:** people read the variants aloud. Synthetic voices are a possible scale-up.
+4. **Speech-to-text:** several open models (for example Whisper large-v3 and current Open ASR Leaderboard leaders), run offline on a GPU cluster.
+5. **Grading:** the report prompt from the open-source [Aural](https://github.com/1146345502/aural-oss) interview platform, run against open LLMs served by vLLM plus one hosted model. Prompt, rubric and model versions are frozen before any data runs.
+6. **Analysis:** score gaps within each correctness level, how often correct answers are failed, how many dialect features survive speech-to-text, and mixed-effects models.
+
+The three grading conditions keep the effects apart:
+- **A vs B:** speakers standardizing the grammar while reading.
+- **B vs C:** speech-to-text errors and standardizing.
+- **Condition A alone:** pure grader bias.
+
 ## Setup (Python >=3.11)
 
     pip install -r requirements.txt
