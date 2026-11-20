@@ -6,38 +6,36 @@ Turns SAE interview answers into dialect versions (via Multi-VALUE), flags risky
 
 > **Tentative, until the team decides otherwise.** Only the dialect generator (step 2 below) exists today. Everything else is planned. The full plan, open decisions and work list are in [PLAN.md](PLAN.md).
 
-The study asks whether AI interview grading scores people differently depending on the English dialect they speak, when their answers are equally correct. It separates three possible sources of a gap: how people sound (accent, delivery), dialect grammar, and the speech-to-text step used by text-based tools.
+The study asks whether an AI interview pipeline (speech-to-text plus an LLM grader) scores dialect answers lower than equally correct Standard American English answers, and which step causes any gap.
 
 ```mermaid
 flowchart TD
-  Q["15 interview questions<br/>QUESTIONS.md"] --> A["SAE answers<br/>+ correctness labels"]
-  A --> B["Dialect generation<br/>Multi-VALUE + checks + human review"]
-  B --> T["Text condition"]
-  B --> S["Recordings<br/>every speaker reads SAE + dialect versions"]
-  S --> AU["Audio condition (main)<br/>audio-capable LLM graders"]
-  S --> R["Speech-to-text models"]
-  R --> RT["Speech-to-text condition"]
-  T --> G["Text LLM graders"]
-  RT --> G
+  A["SAE interview answers<br/>+ correctness labels"] --> B["Dialect generation<br/>Multi-VALUE + checks + human review"]
+  B --> T["Condition A: dialect text"]
+  B --> S["Speech<br/>human readers + synthetic voices"]
+  S --> H["Condition B: human-verified transcript"]
+  S --> R["Condition C: speech-to-text models"]
+  T --> G["LLM graders<br/>Aural report prompt, fixed rubric"]
+  H --> G
+  R --> G
   R --> F["WER + dialect-feature survival"]
-  AU --> M["Analysis<br/>score gaps, accent vs grammar,<br/>missed correct answers"]
-  G --> M
+  X["Natural-speech corpora<br/>NSC, Svarah, CORAAL"] --> RX["Same speech-to-text models"]
+  RX --> F
+  G --> M["Analysis: score gaps,<br/>missed correct answers, mixed-effects models"]
   F --> M
 ```
 
-1. **Questions:** 15 technical interview questions ([QUESTIONS.md](QUESTIONS.md)).
-2. **Answer bank:** SAE answers at three correctness levels (correct / partial / incorrect), each label checked by a person.
-3. **Dialect generation** (`generate_dialects.py`, this repo): Indian English, Singlish, and possibly AAE, then reviewed by speakers of each variety.
-4. **Recordings:** every speaker reads both SAE and dialect versions, all with the same recording setup.
-5. **Grading.**
-   - **Audio (main):** recordings go straight to audio-capable LLMs. Candidates are hosted models (Gemini, OpenAI gpt-audio) and open models on a GPU cluster (Qwen3-Omni, Voxtral, MERaLiON).
-   - **Text and speech-to-text:** text LLM graders score the reviewed text and the speech-to-text transcripts.
-   - Prompts and model versions are frozen before any data runs.
-6. **Analysis:** score gaps within each correctness level, accent vs grammar effects, how often correct answers are failed, and how much dialect survives speech-to-text.
+1. **Answer bank:** SAE answers to technical interview questions, each with a correctness label.
+2. **Dialect generation** (`generate_dialects.py`, this repo): Indian English, Singlish, and possibly AAE, then reviewed by speakers of each variety.
+3. **Speech:** people read the variants aloud. Synthetic voices are a possible scale-up.
+4. **Speech-to-text:** several open models (for example Whisper large-v3 and current Open ASR Leaderboard leaders), run offline on a GPU cluster.
+5. **Grading:** the report prompt from the open-source [Aural](https://github.com/1146345502/aural-oss) interview platform, run against open LLMs served by vLLM plus one hosted model. Prompt, rubric and model versions are frozen before any data runs.
+6. **Analysis:** score gaps within each correctness level, how often correct answers are failed, how many dialect features survive speech-to-text, and mixed-effects models.
 
-How the conditions keep the effects apart:
-- **Audio vs text:** what the voice adds beyond the words.
-- **Speech-to-text vs text:** how much transcription changes the score.
+The three grading conditions keep the effects apart:
+- **A vs B:** speakers standardizing the grammar while reading.
+- **B vs C:** speech-to-text errors and standardizing.
+- **Condition A alone:** pure grader bias.
 
 ## Setup (Python >=3.11)
 
